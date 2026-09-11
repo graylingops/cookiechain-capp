@@ -1,0 +1,151 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<title>Cookie Jar — an on-chain cookie log on Cookie Chain</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Cookie Jar: a tiny cApp that records every action as a real SPL Memo transaction on Cookie Chain (SVM), with live confirmation feedback and an RPC-driven activity dashboard.">
+<style>
+:root{color-scheme:light dark;--series-1:#2a78d6}
+body{font:16px/1.6 system-ui,sans-serif;max-width:860px;margin:2rem auto;padding:0 1rem;color:#1a1a2e}
+h1{font-size:1.6rem} h2{font-size:1.15rem;margin-top:2.2rem;border-bottom:1px solid #ddd;padding-bottom:.2rem}
+a{color:#0a58ca} .muted{color:#555} ul{padding-left:1.2rem}
+.card{border:1px solid #ddd;border-radius:8px;padding:1rem 1.2rem;margin:.8rem 0}
+code{background:#f4f4f8;padding:.05rem .3rem;word-break:break-all}
+.big{font-size:1.5rem;font-weight:600}
+.warn{color:#8a4b00;background:#fff7e6;border:1px solid #e6c88a;border-radius:8px;padding:.8rem 1.2rem;margin:.8rem 0}
+.ok{color:#0f5132;background:#eef7f0;border:1px solid #9ccda8;border-radius:8px;padding:.8rem 1.2rem;margin:.8rem 0}
+.bad{color:#8a1c1c;background:#fdf1f1;border:1px solid #e0a3a3;border-radius:8px;padding:.8rem 1.2rem;margin:.8rem 0}
+.addr{font-family:ui-monospace,monospace;font-size:.9rem}
+button{font:inherit;padding:.2rem .7rem;border:1px solid #bbb;border-radius:6px;background:#fff;cursor:pointer}
+button:hover:not(:disabled){background:#f2f2f2}
+button:disabled{opacity:.45;cursor:not-allowed}
+label{font-size:.9rem;color:#555}
+footer{margin-top:3rem;border-top:1px solid #ddd;padding-top:1rem}
+table{border-collapse:collapse;width:100%}
+td,th{border-bottom:1px solid #eee;padding:.35rem .5rem;text-align:left}
+textarea,select,input{font:inherit;width:100%;box-sizing:border-box;padding:.4rem;border:1px solid #ccc;border-radius:6px}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+.spacer{flex:1}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin:.8rem 0}
+.tile{border:1px solid #ddd;border-radius:8px;padding:.7rem .9rem}
+.tile .v{font-size:1.45rem;font-weight:650;font-variant-numeric:tabular-nums}
+.tile .k{font-size:.82rem;color:#555}
+.feed li{margin:.35rem 0}
+.chart-wrap{position:relative;margin:.6rem 0}
+#tip{position:absolute;pointer-events:none;background:#1a1a2e;color:#fff;font-size:.78rem;padding:.2rem .45rem;border-radius:5px;display:none;white-space:nowrap;z-index:3}
+@media (prefers-color-scheme:dark){
+  body{color:#e8e7e0;background:#141413;--series-1:#3987e5}
+  .card,.tile{border-color:#333;background:#1a1a19}
+  h2{border-color:#333} .muted{color:#b7b6ac}
+  code{background:#242422}
+  a{color:#7db4f0}
+  button{background:#222;border-color:#444;color:#e8e7e0}
+  button:hover:not(:disabled){background:#2b2b29}
+  .warn{color:#e8b675;background:#2a2214;border-color:#6b5426}
+  .ok{color:#93d0a4;background:#12241a;border-color:#2c593d}
+  .bad{color:#e39a9a;background:#2a1515;border-color:#6b3232}
+  td,th{border-color:#2a2a28}
+  textarea,select,input{background:#222;border-color:#444;color:#e8e7e0}
+}
+</style></head><body>
+
+<h1>Cookie Jar <span class="muted" style="font-size:1rem">— a cApp on Cookie Chain</span></h1>
+<p class="muted">Every action you take here is a <b>real Cookie Chain transaction</b>: a
+<b>SPL Memo</b> instruction signed by your wallet and confirmed on-chain, with live
+feedback at every step. No custom program, no token transfers, nothing leaves your
+wallet except the transaction fee (paid in COOK). Feed and dashboard are read
+directly from the Cookie Chain RPC.</p>
+
+<div class="warn" id="net-banner" hidden></div>
+
+<div class="card">
+<h2 style="margin-top:0">1. Connect your wallet</h2>
+<p><b>Nightly is required</b> by the Cookie Chain brief and is detected first;
+other standard SVM wallets (Phantom-style <code>window.solana</code>) work too.
+Point the wallet's custom network at <code>https://rpc.cookiescan.io</code>
+(see the <a href="README.md">README</a>).</p>
+<p class="row">
+  <button id="btn-connect">Connect wallet</button>
+  <button id="btn-disconnect" disabled>Disconnect</button>
+  <span id="wallet-state" class="muted">not connected</span>
+</p>
+<p id="addr-row" hidden>Connected address:<br><span class="addr big" id="addr"></span>
+  <button type="button" id="btn-copy-addr">copy</button></p>
+<p id="bal-row" class="muted" hidden>Balance: <span id="bal"></span> COOK
+  <span class="muted">(read-only RPC; if it shows 0 you have no gas for fees —
+  see the bridge at <a href="https://hyperlane.cookiescan.io">hyperlane.cookiescan.io</a>)</span></p>
+<div id="wallet-msg" hidden></div>
+</div>
+
+<div class="card" id="gas-gate" hidden>
+<h2 style="margin-top:0">Operator demo mode — gas gate active</h2>
+<p class="muted">This deployment's demo transactions are <b>gated on a pending
+sponsor COOK gas drip</b> (there is no faucet; the only $0 route is a sponsor
+drip). Until it lands, the <b>Sign &amp; send</b> button stays disabled <b>for
+this deployment's operator demo wallet only</b>, and this banner stays up.
+Everything else — wallet connect, address display, transaction construction,
+<b>free RPC simulation</b>, confirmation handling, feed and dashboard — is live
+and real. Sending with <b>your own</b> funded wallet is unaffected by the gate
+and works normally right now.</p>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0">2. Bake a cookie <span class="muted" style="font-size:.9rem">(one memo transaction)</span></h2>
+<p class="row"><label for="kind" style="min-width:6rem">Kind</label>
+  <select id="kind" style="width:auto">
+    <option value="bake">bake — I baked cookies</option>
+    <option value="taste">taste — I tasted one</option>
+    <option value="tip">tip — sharing a cookie tip</option>
+  </select></p>
+<p><label for="note">Note (goes on-chain, public, up to ~200 Latin characters; the on-chain limit is 400 bytes, so emoji/multi-byte notes count heavier)</label>
+  <textarea id="note" rows="2" maxlength="200" placeholder="chocolate chip, 12 cookies, first batch of the season"></textarea></p>
+<p class="muted">On-chain memo payload (<code>spl-memo</code> program
+<code id="pid"></code>):</p>
+<pre class="addr" id="memo-preview" style="white-space:pre-wrap;background:#f4f4f8;border-radius:6px;padding:.6rem"></pre>
+<p class="row">
+  <button id="btn-simulate" disabled>Simulate (free — no fee, no gas)</button>
+  <button id="btn-send" disabled>Sign &amp; send</button>
+  <span id="tx-size" class="muted"></span>
+</p>
+<div id="sim-msg" hidden></div>
+</div>
+
+<div class="card" id="conf-card" hidden>
+<h2 style="margin-top:0">3. Transaction status</h2>
+<div id="conf-body"></div>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0">Cookie Jar feed</h2>
+<p class="muted">Live from the Cookie Chain RPC: memo transactions matching the
+<code>cookiejar:v1</code> schema, from the tracked jar wallets below plus your
+connected wallet. <a href="#" id="reload-feed">refresh</a> ·
+tracked list: <a class="addr" id="plink" href="participants.json">participants.json</a></p>
+<ul class="feed" id="feed"><li class="muted">loading…</li></ul>
+<details><summary class="muted">Add a tracked jar wallet</summary>
+<p class="muted">Tracked wallets live in <code>participants.json</code> next to this
+page (a static file, so anyone can open a PR to add their jar). Your connected
+wallet's recent activity is always included automatically.</p></details>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0">Activity</h2>
+<div class="tiles" id="tiles"></div>
+<div class="chart-wrap"><svg id="chart" role="img" aria-label="Cookies baked per hour, last 24 hours" width="100%" height="150"></svg><div id="tip"></div></div>
+<p class="muted">Cookies baked per hour, last 24 hours (single series; block time from RPC).</p>
+<details><summary class="muted">Table view</summary><table id="chart-table"></table></details>
+</div>
+
+<h2>For developers</h2>
+<div class="card">
+<ul>
+<li>Chain: <b>Cookie Chain</b> (SVM, solana-core <span id="api-ver">…</span>) · RPC <code>https://rpc.cookiescan.io</code> · explorer <a href="https://cookiescan.io">cookiescan.io</a></li>
+<li>Genesis hash: <code class="addr" id="genesis"></code> <span class="muted">(the app checks this and warns on a wrong network)</span></li>
+<li>Program used: SPL Memo <code class="addr" id="pid2"></code> — deployed and executable on Cookie Chain, so <b>no custom program and no deploy cost</b>.</li>
+<li>Memo schema: <code>cookiejar:v1|&lt;kind&gt;|&lt;note&gt;</code>, kind ∈ {bake, taste, tip}.</li>
+<li>Source + README: this directory; read-only signature verifier: <code>tools/verify_tx.py</code>.</li>
+</ul>
+</div>
+
+<footer><span class="muted">Grayling Ops · open source · no accounts, no tracking, nothing stored server-side — your keys never leave your wallet.</span></footer>
+<script type="module" src="app.js"></script>
+</body></html>

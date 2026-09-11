@@ -1,0 +1,6 @@
+{
+  "schema": "cookiejar-tracked-wallets-v1",
+  "note": "Static, public list of wallets whose recent Cookie Chain activity the feed watches. Anyone can add a jar wallet via PR. The connected wallet's own activity is always included automatically, on top of this list. NO KEY MATERIAL EVER GOES HERE — public addresses only.",
+  "status": "EMPTY pending the sponsor COOK gas drip; the operator demo wallet address will be added here once it is funded and has recorded its first on-chain cookie.",
+  "wallets": []
+}
