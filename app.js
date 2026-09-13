@@ -160,10 +160,8 @@ function buildMemoTx(kind, note, payer) {
   const bytes = ENCODER.encode(memo);
   if (bytes.length > 400) throw new Error(`memo too large (${bytes.length} bytes; the on-chain limit is 400 bytes — roughly 200 plain Latin characters, less for emoji or multi-byte scripts)`);
   if (!KINDS.includes(kind)) throw new Error(`unknown kind: ${kind}`);
-  // SPL Memo v2 (MemoSq4gq…): first data byte is the instruction index (0), then the memo string.
-  const data = new Uint8Array(1 + bytes.length);
-  data[0] = 0;
-  data.set(bytes, 1);
+  // SPL Memo (MemoSq4gq…): the instruction data IS the memo string, byte for byte.
+  const data = bytes;
   const tx = new Transaction().add(new TransactionInstruction({
     programId: MEMO_PID,
     keys: [{ pubkey: payer, isSigner: true, isWritable: true }],

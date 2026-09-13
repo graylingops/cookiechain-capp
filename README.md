@@ -81,9 +81,8 @@ Memo payload schema:
 cookiejar:v1|<kind>|<note>      kind ∈ { bake, taste, tip }
 ```
 
-The v2 instruction index byte (`0x00`) prefixes the payload inside the
-instruction data; the tag prefix lets the feed pick jar memos out of all chain
-activity.
+The instruction data is the memo payload itself; the tag prefix lets the feed
+pick jar memos out of all chain activity.
 
 ## App-specific data / dashboard
 

@@ -157,7 +157,7 @@ def compact_u16(n: int) -> bytes:
 
 def build_memo_tx(payer_pubkey: bytes, memo: bytes, blockhash: bytes) -> bytes:
     """Legacy Solana message: accounts [payer(writable signer), memo program(readonly)]."""
-    data = b"\x00" + memo  # SPL Memo v2: instruction index 0, then the memo string
+    data = memo  # SPL Memo (MemoSq4gq…): the instruction data IS the memo string
     msg = bytes([1, 0, 1])                       # header: 1 signer, 0 ro-signed, 1 ro-unsigned
     msg += compact_u16(2) + payer_pubkey + b58decode(MEMO_PID)
     msg += blockhash
