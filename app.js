@@ -187,6 +187,9 @@ function previewTx() {
     if (!latestTx.recentBlockhash) {
       latestTx.recentBlockhash = PLACEHOLDER_BLOCKHASH;
     }
+    if (!latestTx.feePayer) {
+      latestTx.feePayer = payer;
+    }
     const msgLen = latestTx.serializeMessage().length;
     $('tx-size').textContent = `message ${msgLen} B · payer ${short(payer.toBase58())}`;
     show($('sim-msg'), 'ok', 'Transaction built (unsigned). Use <b>Simulate</b> for a free, ' +
