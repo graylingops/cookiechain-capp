@@ -2,9 +2,11 @@
 // Single-page, buildless, vanilla JS + @solana/web3.js (ESM from esm.sh).
 // All reads are free RPC calls; the only spend anywhere is a user-signed tx fee in COOK.
 //
-// GAS GATE: only this deployment's OPERATOR DEMO WALLET is gated, while its fee
-// money comes from a pending sponsor COOK gas drip (Cookie Chain has no faucet —
-// see README, "Current deployment status"). Everything else runs for real:
+// GAS GATE: lifted 2026-09-13 — the sponsor COOK drip landed (100 COOK verified
+// on-chain on the operator demo wallet via rpc.cookiescan.io), so the gate below
+// was flipped to false (see README, "Current deployment status"). It can be
+// re-armed only if the operator wallet runs out of gas again. Everything else
+// runs for real:
 // connect, address display, tx construction, FREE on-chain simulation
 // (simulateTransaction is a read-only RPC call), confirmation polling, feed,
 // dashboard. Any user wallet with its own COOK transacts normally, gate or not.
@@ -25,16 +27,15 @@ const EXPLORER_TX = 'https://cookiescan.io/tx/';
 const ENCODER = new TextEncoder();
 
 // Operator demo gate: applies ONLY to the operator demo wallet below (the
-// wallet that records this deployment's demo transactions). It is gated while
-// its fee money is pending a sponsor COOK gas drip — Cookie Chain has no
-// faucet. Every other wallet is never gated. Flip `active` to false once the
-// drip has landed (never commit key material — connect via the wallet UI, do
-// not hardcode secrets here).
+// wallet that records this deployment's demo transactions). GATED OFF since
+// 2026-09-13: the sponsor COOK drip landed, so `active` is false and the
+// operator wallet transacts like any other funded wallet. Never commit key
+// material — connect via the wallet UI, do not hardcode secrets here.
 const OPERATOR_DEMO_WALLET = '5kstYS2Wo4rdxETkw3wADLWGFm4gGsWk32FALUTDBMAn';
 const GAS_GATE = {
-  active: true,
-  reason: 'The operator demo wallet is gas-gated pending a sponsor COOK drip ' +
-          '(no faucet on Cookie Chain). Other funded wallets can transact normally.',
+  active: false,
+  reason: 'The operator demo wallet gas gate was lifted on 2026-09-13 after the ' +
+          'sponsor COOK drip landed. All funded wallets transact normally.',
   appliesTo(pubkey) {
     return this.active && !!pubkey && pubkey.toBase58() === OPERATOR_DEMO_WALLET;
   },

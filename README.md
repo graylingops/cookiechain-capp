@@ -136,15 +136,14 @@ this page talks to the RPC for reads and to your wallet for signing.
 
 ## Current deployment status (gas gate)
 
-The `Sign & send` button is **gated for this deployment's operator demo wallet
-only**: Cookie Chain has no faucet, and the only $0 route to fee money is a
-sponsor COOK drip, which is pending. Every other user with a funded wallet can
-transact normally right now — the same code path, same confirmation handling,
-same feed. Everything else — wallet connect, address display, transaction
-construction, free on-chain simulation, confirmation handling, error feedback,
-feed, dashboard — is live for everyone. This gate is documented in the app UI
-and in the repository; it is a deployment-stage constraint, not a missing
-feature.
+The operator demo wallet's gas gate was **lifted on 2026-09-13**: the sponsor
+COOK gas drip landed, so `Sign & send` works for the operator demo wallet and
+for every other funded wallet alike — the same code path, same confirmation
+handling, same feed. (Cookie Chain still has no faucet; the gas-gate code path
+remains in the app, ready to re-arm only if the operator wallet ever runs out
+of fee money again.) Everything else — wallet connect, address display,
+transaction construction, free on-chain simulation, confirmation handling,
+error feedback, feed, dashboard — is live for everyone.
 
 ## License
 
