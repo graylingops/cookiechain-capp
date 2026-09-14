@@ -229,7 +229,13 @@ async function simulate() {
     latestTx.recentBlockhash = blockhash;
     latestTx.feePayer = walletPubkey || burn.publicKey;
     const vtx = new VersionedTransaction(latestTx.compileMessage());
-    vtx.sign([burn]);
+    if (!walletPubkey) {
+      // No connected wallet: fee payer is the throwaway keypair, so give the
+      // simulation a real (throwaway) signature.
+      vtx.sign([burn]);
+    }
+    // With a connected wallet the placeholder all-zero signature slot is left
+    // as-is; sigVerify is off, so the RPC does not check signatures at all.
     const sim = await conn.simulateTransaction(vtx, { sigVerify: false, replaceRecentBlockhash: true });
     if (sim.value.err) {
       show(msg, 'bad', `<b>Simulation FAILED on-chain:</b> <code>${esc(JSON.stringify(sim.value.err))}</code>` +
