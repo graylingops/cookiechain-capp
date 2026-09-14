@@ -178,6 +178,15 @@ function previewTx() {
   try {
     latestTx = buildMemoTx(kind, note, payer);
     $('memo-preview').textContent = buildMemoString(kind, note);
+    // serializeMessage() refuses to serialize a tx with no recent blockhash —
+    // and at preview time none is fetched yet. Give the preview a placeholder
+    // blockhash purely so the message size can be computed. simulate() and
+    // send() both overwrite recentBlockhash with a fresh one from the RPC
+    // before anything is simulated or signed, so this placeholder never
+    // reaches the chain.
+    if (!latestTx.recentBlockhash) {
+      latestTx.recentBlockhash = PLACEHOLDER_BLOCKHASH;
+    }
     const msgLen = latestTx.serializeMessage().length;
     $('tx-size').textContent = `message ${msgLen} B · payer ${short(payer.toBase58())}`;
     show($('sim-msg'), 'ok', 'Transaction built (unsigned). Use <b>Simulate</b> for a free, ' +
@@ -194,6 +203,10 @@ function previewTx() {
 // Placeholder payer used only to shape the preview when no wallet is connected.
 // It is a well-known all-zero address; it can never sign or spend anything.
 const PLACEHOLDER_PAYER = new PublicKey('11111111111111111111111111111111');
+
+// Placeholder recent blockhash, preview-time only (see previewTx): needed so the
+// unsigned message can be measured. Never used for simulation, signing or send.
+const PLACEHOLDER_BLOCKHASH = '11111111111111111111111111111111';
 
 // ---------------------------------------------------------------- simulate (free)
 async function simulate() {
