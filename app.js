@@ -217,12 +217,17 @@ async function simulate() {
   const msg = $('sim-msg');
   show(msg, 'muted', 'Simulating on the live chain (read-only, no fee)…');
   try {
-    // Simulation needs a signature that verifies; use a throwaway keypair kept
-    // in memory only (never persisted, never used for anything else, holds no funds).
+    // Simulation is a free read-only call, but Cookie Chain (like other SVM
+    // chains without rent-exemption-on-simulate) rejects a simulation whose fee
+    // payer account does not exist on-chain ("AccountNotFound") — and a
+    // throwaway unfunded keypair would hit exactly that. Use the connected
+    // wallet as the simulated fee payer when one is connected (nothing is
+    // signed by it and nothing is charged — sigVerify is off), falling back to
+    // the in-memory throwaway keypair only when no wallet is connected.
     const burn = Keypair.generate();
     const { blockhash } = await conn.getLatestBlockhash();
     latestTx.recentBlockhash = blockhash;
-    latestTx.feePayer = burn.publicKey;
+    latestTx.feePayer = walletPubkey || burn.publicKey;
     const vtx = new VersionedTransaction(latestTx.compileMessage());
     vtx.sign([burn]);
     const sim = await conn.simulateTransaction(vtx, { sigVerify: false, replaceRecentBlockhash: true });
